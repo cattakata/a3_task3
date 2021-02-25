@@ -28,14 +28,14 @@ library(ggwordcloud)
 eden_text <- pdf_text("east_of_eden.pdf")
 ```
 
-```{r}
+```{r, warning=F, message=F}
 eden_tidy <- data.frame(eden_text) %>% 
   mutate(text_full = str_split(eden_text, pattern = '\\n')) %>% 
   unnest(text_full) %>% 
   mutate(text_full = str_trim(text_full)) 
 ```
 
-```{r}
+```{r, warning=F, message=F}
 # Use mutate() to create a new column of data
 # Conditional entry using case_when() if we detect a string "Chapter"
 # Set NA to the right column class: "character" so it the column will be populated if CHAPTER is not detected 
@@ -55,7 +55,7 @@ eden_df <- eden_tidy %>%
 
 ### Token-ized text format 
 
-```{r}
+```{r, warning=F, message=F}
 # Break up text into individual tokens of individual words in a new column 
 eden_tokens <- eden_df %>% 
   unnest_tokens(word, text_full) %>% 
@@ -68,7 +68,7 @@ eden_wordcount <- eden_tokens %>%
 ### Stop words 
 We will *remove* stop words using `tidyr::anti_join()`, which will *omit* any words in `stop_words` from `eden_tokens`.
 
-```{r}
+```{r, warning=F, message=F}
 # What do we NOT want to keep 
 eden_nonstop_words <- eden_tokens %>% 
   anti_join(stop_words)
@@ -80,19 +80,19 @@ nonstop_counts <- eden_nonstop_words %>%
 
 ## Word cloud data visualization
 
-```{r}
+```{r, warning=F, message=F}
 ch1_top100 <- nonstop_counts %>% 
   filter(chapter == 1) %>% 
   arrange(-n) %>% 
   slice(1:100)
 
-ch1_cloud <- ggplot(data = ch1_top100, aes(label = word)) +
+ggplot(data = ch1_top100, aes(label = word)) +
   geom_text_wordcloud(aes(color = n, size = n), shape = "diamond") +
   scale_size_area(max_size = 6) +
   scale_color_gradientn(colors = c("slateblue","green","purple")) +
-  theme_minimal()
-
-ch1_cloud
+  theme_minimal() +
+  labs(title = "Top 100 most used words", 
+       subtitle = "Chapter 1, East of Eden by John Steinbeck")
 ```
 
 
@@ -103,13 +103,21 @@ ch1_cloud
 eden_afinn <- eden_nonstop_words %>% 
   inner_join(get_sentiments("afinn"))
 
-# Counts by sentiment analysis ranking 
-afinn_counts <- eden_afinn %>% 
-  count(chapter, value)
+# Find the mean by sentiment analysis ranking 
+afinn_means <- eden_afinn %>% 
+  group_by(chapter) %>% 
+  summarize(mean_afinn = mean(value))
 
-ggplot(data = afinn_counts, aes(x = value, y = n)) +
-  geom_col() +
-  facet_wrap(~chapter)
+ggplot(data = afinn_means, 
+       aes(x = fct_rev(as.factor(chapter)), 
+           y = mean_afinn)) +
+  geom_col(fill = "slateblue") +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "Mean score by AFINN sentiment analysis ranking", 
+       subtitle = "By chapter, East of Eden by John Steinbeck",
+       x = "Chapters",
+       y = "Mean Score")
 ```
 
 
