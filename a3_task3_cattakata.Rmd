@@ -1,0 +1,118 @@
+---
+title: "Assignment 3, Task 3: East of Eden text analysis"
+author: "Catherine Takata"
+date: "2/25/2021"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: show
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidytext)
+library(textdata)
+library(pdftools)
+library(ggwordcloud)
+```
+
+```{r, cache=TRUE}
+eden_text <- pdf_text("east_of_eden.pdf")
+```
+
+```{r}
+eden_tidy <- data.frame(eden_text) %>% 
+  mutate(text_full = str_split(eden_text, pattern = '\\n')) %>% 
+  unnest(text_full) %>% 
+  mutate(text_full = str_trim(text_full)) 
+```
+
+```{r}
+# Use mutate() to create a new column of data
+# Conditional entry using case_when() if we detect a string "Chapter"
+# Set NA to the right column class: "character" so it the column will be populated if CHAPTER is not detected 
+
+eden_df <- eden_tidy %>% 
+  slice(-(1:105)) %>% 
+  mutate(chapter = case_when(
+    str_detect(text_full, "CHAPTER") ~ text_full,
+    TRUE ~ NA_character_
+  )) %>% 
+  fill(chapter) %>% 
+  separate(col = chapter, into = c("ch", "no"), sep = " ") %>% 
+  mutate(chapter = as.numeric(no))
+```
+
+## Wrangle data
+
+### Token-ized text format 
+
+```{r}
+# Break up text into individual tokens of individual words in a new column 
+eden_tokens <- eden_df %>% 
+  unnest_tokens(word, text_full) %>% 
+  select(-eden_text)
+
+eden_wordcount <- eden_tokens %>% 
+  count(chapter, word)
+```
+
+### Stop words 
+We will *remove* stop words using `tidyr::anti_join()`, which will *omit* any words in `stop_words` from `eden_tokens`.
+
+```{r}
+# What do we NOT want to keep 
+eden_nonstop_words <- eden_tokens %>% 
+  anti_join(stop_words)
+
+# Counts 
+nonstop_counts <- eden_nonstop_words %>% 
+  count(chapter, word)
+```
+
+## Word cloud data visualization
+
+```{r}
+ch1_top100 <- nonstop_counts %>% 
+  filter(chapter == 1) %>% 
+  arrange(-n) %>% 
+  slice(1:100)
+
+ch1_cloud <- ggplot(data = ch1_top100, aes(label = word)) +
+  geom_text_wordcloud(aes(color = n, size = n), shape = "diamond") +
+  scale_size_area(max_size = 6) +
+  scale_color_gradientn(colors = c("slateblue","green","purple")) +
+  theme_minimal()
+
+ch1_cloud
+```
+
+
+## Sentiment analysis with East of Eden
+
+```{r}
+# Use interjoin() to keep words in East of Eden that can be evaluated in the 'afinn' lexicon 
+eden_afinn <- eden_nonstop_words %>% 
+  inner_join(get_sentiments("afinn"))
+
+# Counts by sentiment analysis ranking 
+afinn_counts <- eden_afinn %>% 
+  count(chapter, value)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
