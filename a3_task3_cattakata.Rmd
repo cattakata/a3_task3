@@ -9,6 +9,12 @@ output:
     toc: true
 ---
 
+## Summmary 
+In this task, we will explore text wrangling and analysis of East of Eden by John Steinbeck. We will tidy and tokenize a pdf and further determine the most used words as well as the sentiment ranking via the 'AFINN' lexicon. 
+
+Sources: Julia Silge and David Robinson (https://www.tidytextmining.com/sentiment.html), Steinbeck, East of Eden, Internet Archive (text).  
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
@@ -100,6 +106,10 @@ eden_afinn <- eden_nonstop_words %>%
 # Counts by sentiment analysis ranking 
 afinn_counts <- eden_afinn %>% 
   count(chapter, value)
+
+ggplot(data = afinn_counts, aes(x = value, y = n)) +
+  geom_col() +
+  facet_wrap(~chapter)
 ```
 
 
